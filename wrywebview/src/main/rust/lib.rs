@@ -979,6 +979,19 @@ pub fn close_dev_tools(id: u64) -> Result<(), WebViewError> {
 
 fn destroy_webview_inner(id: u64) -> Result<(), WebViewError> {
     wry_log!("[wrywebview] destroy_webview id={}", id);
+
+    #[cfg(target_os = "linux")]
+    {
+        gdk::error_trap_push();
+        let res = unregister(id);
+        while gtk::events_pending() {
+            gtk::main_iteration_do(false);
+        }
+        let _ = gdk::error_trap_pop();
+        res
+    }
+
+    #[cfg(not(target_os = "linux"))]
     unregister(id)
 }
 
