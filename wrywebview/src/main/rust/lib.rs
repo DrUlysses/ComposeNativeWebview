@@ -778,9 +778,7 @@ fn focus_inner(id: u64) -> Result<(), WebViewError> {
             wry_log!("[wrywebview] gtk grab_focus called");
         }
 
-        webview
-            .evaluate_script("document.documentElement.focus(); window.focus();")
-            .map_err(WebViewError::from)
+        webview.focus().map_err(WebViewError::from)
     })
 }
 
