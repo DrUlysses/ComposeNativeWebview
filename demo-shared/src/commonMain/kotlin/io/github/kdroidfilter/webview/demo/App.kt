@@ -1,34 +1,12 @@
 package io.github.kdroidfilter.webview.demo
 
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.width
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.VerticalDivider
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.ExperimentalComposeApi
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.movableContentOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import io.github.kdroidfilter.webview.cookie.Cookie
-import io.github.kdroidfilter.webview.jsbridge.IJsMessageHandler
 import io.github.kdroidfilter.webview.jsbridge.rememberWebViewJsBridge
 import io.github.kdroidfilter.webview.util.KLogSeverity
 import io.github.kdroidfilter.webview.web.WebView
@@ -85,50 +63,51 @@ fun App() {
                 backgroundColor = androidx.compose.ui.graphics.Color.White
             }
         val jsBridge = rememberWebViewJsBridge(navigator)
-        val webViewContent =
-            remember(webViewState, navigator, jsBridge) {
-                movableContentOf<Modifier> { webViewModifier ->
-                    WebView(
-                        state = webViewState,
-                        navigator = navigator,
-                        webViewJsBridge = jsBridge,
-                        modifier = webViewModifier,
-                    )
-                }
+        val webViewContent = remember(webViewState, navigator, jsBridge) {
+            movableContentOf<Modifier> { webViewModifier ->
+                WebView(
+                    state = webViewState,
+                    navigator = navigator,
+                    webViewJsBridge = jsBridge,
+                    modifier = webViewModifier,
+                )
             }
+        }
 
         var urlText by remember { mutableStateOf("https://httpbin.org/html") }
 
-        val additionalHeaders =
-            remember(customHeadersEnabled, headerName, headerValue) {
-                if (!customHeadersEnabled) return@remember emptyMap()
-                val key = headerName.trim()
-                if (key.isEmpty()) return@remember emptyMap()
-                mapOf(key to headerValue)
+        val additionalHeaders = remember(customHeadersEnabled, headerName, headerValue) {
+            if (!customHeadersEnabled) {
+                return@remember emptyMap()
             }
+            val key = headerName.trim()
+            if (key.isEmpty()) {
+                return@remember emptyMap()
+            }
+            mapOf(key to headerValue)
+        }
 
         LaunchedEffect(webViewState.lastLoadedUrl) {
             webViewState.lastLoadedUrl?.let { urlText = it }
         }
 
         DisposableEffect(jsBridge, webViewState, scope) {
-            val handlers =
-                listOf<IJsMessageHandler>(
-                    EchoHandler(onLog = ::log),
-                    AppInfoHandler(onLog = ::log),
-                    NavigateHandler(onLog = ::log),
-                    SetCookieHandler(
-                        scope = scope,
-                        cookieManager = webViewState.cookieManager,
-                        onLog = ::log,
-                    ),
-                    GetCookiesHandler(
-                        scope = scope,
-                        cookieManager = webViewState.cookieManager,
-                        onLog = ::log,
-                    ),
-                    CustomHandler(onLog = ::log),
-                )
+            val handlers = listOf(
+                EchoHandler(onLog = ::log),
+                AppInfoHandler(onLog = ::log),
+                NavigateHandler(onLog = ::log),
+                SetCookieHandler(
+                    scope = scope,
+                    cookieManager = webViewState.cookieManager,
+                    onLog = ::log,
+                ),
+                GetCookiesHandler(
+                    scope = scope,
+                    cookieManager = webViewState.cookieManager,
+                    onLog = ::log,
+                ),
+                CustomHandler(onLog = ::log),
+            )
 
             handlers.forEach(jsBridge::register)
             onDispose { handlers.forEach(jsBridge::unregister) }
@@ -145,6 +124,7 @@ fun App() {
 
         var jsSnippet by remember {
             mutableStateOf(
+                //language=javascript
                 """
                 (function () {
                   const id = "composewebview-demo-banner";
@@ -209,9 +189,9 @@ fun App() {
 
                             AnimatedVisibility(visible = toolsVisible) {
                                 DemoToolsPanel(
-                                    modifier =
-                                        Modifier.fillMaxWidth()
-                                            .heightIn(max = constraintsMaxHeight * 0.65f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .heightIn(max = constraintsMaxHeight * 0.65f),
                                     isCompact = true,
                                     webViewState = webViewState,
                                     navigator = navigator,
@@ -241,24 +221,22 @@ fun App() {
                                     cookies = cookies,
                                     onSetCookie = {
                                         val url = normalizeUrl(cookieUrlText.ifBlank { urlText })
-                                        val domain =
-                                            cookieDomain
-                                                .trim()
-                                                .ifBlank { hostFromUrl(url).orEmpty() }
-                                                .trim()
-                                                .takeIf { it.isNotBlank() }
+                                        val domain = cookieDomain
+                                            .trim()
+                                            .ifBlank { hostFromUrl(url).orEmpty() }
+                                            .trim()
+                                            .takeIf { it.isNotBlank() }
                                         val path = cookiePath.trim().ifBlank { "/" }
-                                        val cookie =
-                                            Cookie(
-                                                name = cookieName.trim().ifBlank { "demo_cookie" },
-                                                value = cookieValue,
-                                                domain = domain,
-                                                path = path,
-                                                isSessionOnly = true,
-                                                isSecure = cookieSecure,
-                                                isHttpOnly = cookieHttpOnly,
-                                                sameSite = Cookie.HTTPCookieSameSitePolicy.LAX,
-                                            )
+                                        val cookie = Cookie(
+                                            name = cookieName.trim().ifBlank { "demo_cookie" },
+                                            value = cookieValue,
+                                            domain = domain,
+                                            path = path,
+                                            isSessionOnly = true,
+                                            isSecure = cookieSecure,
+                                            isHttpOnly = cookieHttpOnly,
+                                            sameSite = Cookie.HTTPCookieSameSitePolicy.LAX,
+                                        )
                                         scope.launch {
                                             webViewState.cookieManager.setCookie(url, cookie)
                                             log("setCookie url=$url ${cookie.name} domain=${cookie.domain} path=${cookie.path}")
@@ -298,6 +276,7 @@ fun App() {
                                     },
                                     onCallNativeFromJs = {
                                         val script =
+                                            //language=javascript
                                             """
                                             if (window.kmpJsBridge && window.kmpJsBridge.callNative) {
                                               window.kmpJsBridge.callNative("echo", { text: "Hello from Kotlin (evaluateJavaScript)" }, function (data) {

@@ -6,10 +6,12 @@ import java.util.Locale
 import java.util.TimeZone
 
 actual fun getCookieExpirationDate(expiresDate: Long): String {
-    val sdf =
-        SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z", Locale.US).apply {
-            timeZone = TimeZone.getTimeZone("GMT")
-        }
+    val sdf = SimpleDateFormat(
+        /* pattern = */ "EEE, dd MMM yyyy HH:mm:ss z",
+        /* locale = */ Locale.US
+    ).apply {
+        timeZone = TimeZone.getTimeZone("GMT")
+    }
     return sdf.format(Date(expiresDate))
 }
 

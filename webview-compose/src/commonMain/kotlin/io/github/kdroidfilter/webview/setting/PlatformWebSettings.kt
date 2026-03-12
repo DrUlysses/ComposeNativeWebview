@@ -33,5 +33,10 @@ sealed class PlatformWebSettings {
     data class WasmJSWebSettings(
         var backgroundColor: Color? = null,
         var showBorder: Boolean = false,
+        var enableSandbox: Boolean = false,
+        var customContainerStyle: String? = null,
+        var allowFullscreen: Boolean = true,
+        var borderStyle: String = "1px solid #ccc",
+        var sandboxPermissions: String = "allow-scripts allow-same-origin allow-forms",
     ) : PlatformWebSettings()
 }

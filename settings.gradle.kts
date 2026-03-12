@@ -35,5 +35,6 @@ plugins {
 include(":demo")
 include(":demo-shared")
 include(":demo-android")
+include(":demo-wasmJs")
 include(":wrywebview")
 include(":webview-compose")

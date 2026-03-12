@@ -1,4 +1,7 @@
+@file:OptIn(ExperimentalWasmDsl::class)
+
 import com.vanniktech.maven.publish.KotlinMultiplatform
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
 
 plugins {
     alias(libs.plugins.androidLibrary)
@@ -13,6 +16,9 @@ kotlin {
 
     androidTarget()
     jvm()
+    wasmJs {
+        browser()
+    }
 
     listOf(
         iosX64(),
@@ -24,6 +30,10 @@ kotlin {
             isStatic = true
         }
         iosTarget.setUpiOSObserver()
+    }
+
+    compilerOptions {
+        freeCompilerArgs.add("-Xexpect-actual-classes")
     }
 
     sourceSets {
@@ -45,6 +55,8 @@ kotlin {
         }
 
         iosMain.dependencies { }
+
+        wasmJsMain.dependencies { }
     }
 }
 

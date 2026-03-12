@@ -425,6 +425,7 @@ private fun KeyValueRow(
 }
 
 private fun inlineHtml(): String =
+    //language=HTML
     """
     <!doctype html>
     <html lang="en">

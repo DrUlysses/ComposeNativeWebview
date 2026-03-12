@@ -1,4 +1,5 @@
 package io.github.kdroidfilter.webview.web
 
-actual typealias NativeWebView = io.github.kdroidfilter.webview.wry.WryWebViewPanel
+import io.github.kdroidfilter.webview.wry.WryWebViewPanel
 
+actual typealias NativeWebView = WryWebViewPanel

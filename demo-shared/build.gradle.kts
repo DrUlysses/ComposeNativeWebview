@@ -1,3 +1,7 @@
+@file:OptIn(ExperimentalWasmDsl::class)
+
+import org.jetbrains.kotlin.gradle.ExperimentalWasmDsl
+
 plugins {
     alias(libs.plugins.androidLibrary)
     alias(libs.plugins.kotlinMultiplatform)
@@ -10,8 +14,14 @@ kotlin {
 
     androidTarget()
     jvm()
+    wasmJs {
+        browser()
+    }
 
-    val isMacHost = System.getProperty("os.name")?.contains("Mac", ignoreCase = true) == true
+    val isMacHost = System.getProperty("os.name")?.contains(
+        other = "Mac",
+        ignoreCase = true
+    ) == true
     if (isMacHost) {
         listOf(
             iosX64(),
@@ -45,6 +55,8 @@ kotlin {
         jvmMain.dependencies {
             implementation(compose.desktop.common)
         }
+
+        wasmJsMain.dependencies { }
 
         if (isMacHost) {
             iosMain.dependencies { }

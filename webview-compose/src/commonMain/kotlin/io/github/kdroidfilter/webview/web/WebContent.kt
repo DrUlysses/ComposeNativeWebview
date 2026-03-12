@@ -21,9 +21,3 @@ sealed class WebContent {
 
     data object NavigatorOnly : WebContent()
 }
-
-internal fun WebContent.withUrl(url: String) =
-    when (this) {
-        is WebContent.Url -> copy(url = url)
-        else -> WebContent.Url(url)
-    }

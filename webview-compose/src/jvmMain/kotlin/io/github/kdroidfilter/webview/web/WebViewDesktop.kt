@@ -18,40 +18,41 @@ actual class WebViewFactoryParam(
     val fileContent: String = "",
 )
 
-actual fun defaultWebViewFactory(param: WebViewFactoryParam): NativeWebView =
-    when (val content = param.state.content) {
-        is WebContent.Url -> NativeWebView(
-            initialUrl = content.url,
-            customUserAgent = param.state.webSettings.customUserAgentString,
-            dataDirectory = param.state.webSettings.desktopWebSettings.dataDirectory,
-            supportZoom = param.state.webSettings.supportZoom,
-            backgroundColor = param.state.webSettings.backgroundColor.toRgba(),
-            transparent = param.state.webSettings.desktopWebSettings.transparent,
-            initScript = param.state.webSettings.desktopWebSettings.initScript,
-            enableClipboard = param.state.webSettings.desktopWebSettings.enableClipboard,
-            enableDevtools = param.state.webSettings.desktopWebSettings.enableDevtools,
-            enableNavigationGestures = param.state.webSettings.desktopWebSettings.enableNavigationGestures,
-            incognito = param.state.webSettings.desktopWebSettings.incognito,
-            autoplayWithoutUserInteraction = param.state.webSettings.desktopWebSettings.autoplayWithoutUserInteraction,
-            focused = param.state.webSettings.desktopWebSettings.focused
-        )
+actual fun defaultWebViewFactory(
+    param: WebViewFactoryParam
+): NativeWebView = when (val content = param.state.content) {
+    is WebContent.Url -> NativeWebView(
+        initialUrl = content.url,
+        customUserAgent = param.state.webSettings.customUserAgentString,
+        dataDirectory = param.state.webSettings.desktopWebSettings.dataDirectory,
+        supportZoom = param.state.webSettings.supportZoom,
+        backgroundColor = param.state.webSettings.backgroundColor.toRgba(),
+        transparent = param.state.webSettings.desktopWebSettings.transparent,
+        initScript = param.state.webSettings.desktopWebSettings.initScript,
+        enableClipboard = param.state.webSettings.desktopWebSettings.enableClipboard,
+        enableDevtools = param.state.webSettings.desktopWebSettings.enableDevtools,
+        enableNavigationGestures = param.state.webSettings.desktopWebSettings.enableNavigationGestures,
+        incognito = param.state.webSettings.desktopWebSettings.incognito,
+        autoplayWithoutUserInteraction = param.state.webSettings.desktopWebSettings.autoplayWithoutUserInteraction,
+        focused = param.state.webSettings.desktopWebSettings.focused
+    )
 
-        else -> NativeWebView(
-            initialUrl = "about:blank",
-            customUserAgent = param.state.webSettings.customUserAgentString,
-            dataDirectory = param.state.webSettings.desktopWebSettings.dataDirectory,
-            supportZoom = param.state.webSettings.supportZoom,
-            backgroundColor = param.state.webSettings.backgroundColor.toRgba(),
-            transparent = param.state.webSettings.desktopWebSettings.transparent,
-            initScript = param.state.webSettings.desktopWebSettings.initScript,
-            enableClipboard = param.state.webSettings.desktopWebSettings.enableClipboard,
-            enableDevtools = param.state.webSettings.desktopWebSettings.enableDevtools,
-            enableNavigationGestures = param.state.webSettings.desktopWebSettings.enableNavigationGestures,
-            incognito = param.state.webSettings.desktopWebSettings.incognito,
-            autoplayWithoutUserInteraction = param.state.webSettings.desktopWebSettings.autoplayWithoutUserInteraction,
-            focused = param.state.webSettings.desktopWebSettings.focused
-        )
-    }
+    else -> NativeWebView(
+        initialUrl = "about:blank",
+        customUserAgent = param.state.webSettings.customUserAgentString,
+        dataDirectory = param.state.webSettings.desktopWebSettings.dataDirectory,
+        supportZoom = param.state.webSettings.supportZoom,
+        backgroundColor = param.state.webSettings.backgroundColor.toRgba(),
+        transparent = param.state.webSettings.desktopWebSettings.transparent,
+        initScript = param.state.webSettings.desktopWebSettings.initScript,
+        enableClipboard = param.state.webSettings.desktopWebSettings.enableClipboard,
+        enableDevtools = param.state.webSettings.desktopWebSettings.enableDevtools,
+        enableNavigationGestures = param.state.webSettings.desktopWebSettings.enableNavigationGestures,
+        incognito = param.state.webSettings.desktopWebSettings.incognito,
+        autoplayWithoutUserInteraction = param.state.webSettings.desktopWebSettings.autoplayWithoutUserInteraction,
+        focused = param.state.webSettings.desktopWebSettings.focused
+    )
+}
 
 @Composable
 actual fun ActualWebView(
@@ -164,14 +165,12 @@ actual fun ActualWebView(
                     return@a true
                 }
 
-                val webRequest =
-                    WebRequest(
-                        url = it,
-                        headers = mutableMapOf(),
-                        isForMainFrame = true,
-                        isRedirect = true,
-                        method = "GET",
-                    )
+                val webRequest = WebRequest(
+                    url = it,
+                    headers = mutableMapOf(),
+                    isForMainFrame = true,
+                    isRedirect = true
+                )
 
                 return@a when (val interceptResult =
                     navigator.requestInterceptor.onInterceptUrlRequest(webRequest, navigator)) {
