@@ -4,8 +4,10 @@ package io.github.kdroidfilter.webview.web
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import io.github.kdroidfilter.webview.jsbridge.JsMessage
 import io.github.kdroidfilter.webview.jsbridge.WebViewJsBridge
@@ -87,71 +89,6 @@ fun createWebViewWithSettings(
 }
 
 /**
- * Simple state adapter for WebView state synchronization
- */
-@Composable
-internal fun rememberWebViewStateAdapter(
-    commonWebViewState: WebViewState
-): WebViewStateAdapter = remember(commonWebViewState) {
-    WebViewStateAdapter(commonWebViewState)
-}
-
-internal class WebViewStateAdapter(
-    private val commonWebViewState: WebViewState,
-    private val wasmWebViewState: WasmJsWebViewState = WasmJsWebViewState(),
-) {
-    fun syncFromCommon() {
-        when (val content = commonWebViewState.content) {
-            is WebContent.Url -> {
-                wasmWebViewState.url = content.url
-                wasmWebViewState.content = ""
-            }
-
-            is WebContent.Data -> {
-                wasmWebViewState.content = content.data
-                wasmWebViewState.url = ""
-            }
-
-            is WebContent.File -> {
-                wasmWebViewState.content = ""
-                wasmWebViewState.url = ""
-            }
-
-            is WebContent.NavigatorOnly -> {
-                wasmWebViewState.url = ""
-                wasmWebViewState.content = ""
-            }
-        }
-
-        commonWebViewState.lastLoadedUrl?.let {
-            wasmWebViewState.lastLoadedUrl = it
-        }
-
-        commonWebViewState.pageTitle?.let {
-            wasmWebViewState.pageTitle = it
-        }
-    }
-
-    fun syncToCommon() {
-        wasmWebViewState.lastLoadedUrl?.let {
-            commonWebViewState.lastLoadedUrl = it
-        }
-
-        wasmWebViewState.pageTitle?.let {
-            commonWebViewState.pageTitle = it
-        }
-
-        if (wasmWebViewState.isLoading) {
-            commonWebViewState.loadingState = LoadingState.Loading(0f)
-        } else {
-            commonWebViewState.loadingState = LoadingState.Finished
-        }
-    }
-
-    fun getWasmWebViewState(): WasmJsWebViewState = wasmWebViewState
-}
-
-/**
  * Implementation of the WebView composable for the WebAssembly/JavaScript platform.
  */
 @Composable
@@ -165,23 +102,20 @@ actual fun ActualWebView(
     factory: (WebViewFactoryParam) -> NativeWebView
 ) {
     val scope = rememberCoroutineScope()
-    val stateAdapter = rememberWebViewStateAdapter(state)
     val htmlNavigator = rememberHtmlViewNavigator()
     val htmlViewState = remember { HtmlViewState() }
+    val bridgeCleanup = remember { mutableStateOf<(() -> Unit)?>(null) }
 
+    // Reactively sync navigation state from htmlNavigator to navigator
     LaunchedEffect(navigator, htmlNavigator) {
-        scope.launch {
-            while (true) {
-                kotlinx.coroutines.delay(100)
-                navigator.canGoBack = htmlNavigator.canGoBack
-                navigator.canGoForward = htmlNavigator.canGoForward
+        snapshotFlow { htmlNavigator.canGoBack to htmlNavigator.canGoForward }
+            .collect { (canGoBack, canGoForward) ->
+                navigator.canGoBack = canGoBack
+                navigator.canGoForward = canGoForward
             }
-        }
     }
 
     LaunchedEffect(state.content) {
-        stateAdapter.syncFromCommon()
-
         when (state.content) {
             is WebContent.Url -> {
                 htmlViewState.content = HtmlContent.Url(
@@ -222,19 +156,35 @@ actual fun ActualWebView(
         }
     }
 
-    LaunchedEffect(htmlViewState.lastLoadedUrl, htmlViewState.pageTitle, htmlViewState.loadingState) {
-        val wasmState = stateAdapter.getWasmWebViewState()
+    // Sync HtmlViewState → WebViewState using snapshotFlow to avoid missing intermediate states
+    LaunchedEffect(htmlViewState, state) {
+        snapshotFlow {
+            Triple(htmlViewState.lastLoadedUrl, htmlViewState.pageTitle, htmlViewState.loadingState)
+        }.collect { (lastLoadedUrl, pageTitle, loadingState) ->
+            lastLoadedUrl?.let { state.lastLoadedUrl = it }
+            pageTitle?.let { state.pageTitle = it }
 
-        htmlViewState.lastLoadedUrl?.let { wasmState.lastLoadedUrl = it }
-        htmlViewState.pageTitle?.let { wasmState.pageTitle = it }
-
-        wasmState.isLoading = when (htmlViewState.loadingState) {
-            is HtmlLoadingState.Loading -> true
-            is HtmlLoadingState.Finished -> false
-            is HtmlLoadingState.Initializing -> false
+            when (loadingState) {
+                is HtmlLoadingState.Loading -> {
+                    // Simulate progress like desktop: iframe doesn't provide real progress,
+                    // so we animate from 0.1 to 0.9 while loading
+                    state.loadingState = LoadingState.Loading(0.1f)
+                    scope.launch {
+                        while (htmlViewState.loadingState is HtmlLoadingState.Loading) {
+                            kotlinx.coroutines.delay(100)
+                            val current = state.loadingState
+                            if (current is LoadingState.Loading) {
+                                state.loadingState = LoadingState.Loading(
+                                    (current.progress + 0.02f).coerceAtMost(0.9f)
+                                )
+                            }
+                        }
+                    }
+                }
+                is HtmlLoadingState.Finished -> state.loadingState = LoadingState.Finished
+                is HtmlLoadingState.Initializing -> state.loadingState = LoadingState.Initializing
+            }
         }
-
-        stateAdapter.syncToCommon()
     }
 
     HtmlView(
@@ -268,13 +218,14 @@ actual fun ActualWebView(
                 element = element,
                 nativeWebView = nativeWebView,
                 scope = scope,
-                webViewJsBridge = webViewJsBridge
+                webViewJsBridge = webViewJsBridge,
+                onLoadStarted = { htmlViewState.loadingState = HtmlLoadingState.Loading },
             )
 
             state.webView = webViewWrapper
 
             if (webViewJsBridge != null) {
-                setupJsBridgeForWasm(element, webViewJsBridge, webViewWrapper)
+                bridgeCleanup.value = setupJsBridgeForWasm(element, webViewJsBridge, webViewWrapper)
             }
 
             if (state.content is WebContent.File) {
@@ -288,6 +239,8 @@ actual fun ActualWebView(
             onCreated(nativeWebView)
         },
         onDispose = { element ->
+            bridgeCleanup.value?.invoke()
+            bridgeCleanup.value = null
             state.webView?.let {
                 onDispose(NativeWebView(element))
                 state.webView = null
@@ -297,13 +250,14 @@ actual fun ActualWebView(
 }
 
 /**
- * Set up the JavaScript bridge for WasmJS platform
+ * Set up the JavaScript bridge for WasmJS platform.
+ * Returns a cleanup function that removes the message listener.
  */
 private fun setupJsBridgeForWasm(
     element: HTMLIFrameElement,
     webViewJsBridge: WebViewJsBridge,
     webViewWrapper: WasmJsWebView
-) {
+): () -> Unit {
     val messageHandler: (org.w3c.dom.events.Event) -> Unit = { event ->
         val messageEvent = event as org.w3c.dom.MessageEvent
 
@@ -348,4 +302,6 @@ private fun setupJsBridgeForWasm(
 
     kotlinx.browser.window.addEventListener("message", messageHandler)
     webViewJsBridge.webView = webViewWrapper
+
+    return { kotlinx.browser.window.removeEventListener("message", messageHandler) }
 }

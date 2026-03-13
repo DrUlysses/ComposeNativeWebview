@@ -1,7 +1,6 @@
 @file:OptIn(ExperimentalWasmJsInterop::class)
 package io.github.kdroidfilter.webview.web
 
-import io.github.kdroidfilter.webview.jsbridge.JsMessage
 import io.github.kdroidfilter.webview.jsbridge.WebViewJsBridge
 import io.github.kdroidfilter.webview.util.KLogger
 import kotlinx.coroutines.CoroutineScope
@@ -24,12 +23,15 @@ class WasmJsWebView(
     private val element: HTMLIFrameElement,
     override val nativeWebView: NativeWebView,
     override val scope: CoroutineScope,
-    override val webViewJsBridge: WebViewJsBridge?
+    override val webViewJsBridge: WebViewJsBridge?,
+    var onLoadStarted: (() -> Unit)? = null,
 ) : IWebView {
     override fun canGoBack(): Boolean = element.contentWindow?.history?.length?.let {
         it > 1
     } ?: false
 
+    // Browser iframe history API does not expose whether forward navigation is available.
+    // history.length only gives total entries, not the current position within the stack.
     override fun canGoForward(): Boolean = false
 
     override fun loadUrl(
@@ -37,6 +39,7 @@ class WasmJsWebView(
         additionalHttpHeaders: Map<String, String>
     ) {
         try {
+            onLoadStarted?.invoke()
             element.src = url
             if (webViewJsBridge != null) {
                 scope.launch {
@@ -63,6 +66,7 @@ class WasmJsWebView(
     ) {
         try {
             if (html != null) {
+                onLoadStarted?.invoke()
                 val htmlWithBridge = if (webViewJsBridge != null) {
                     injectBridgeIntoHtml(
                         htmlContent = html,
@@ -92,6 +96,7 @@ class WasmJsWebView(
                 WebViewFileReadType.ASSET_RESOURCES -> "assets/$fileName"
                 WebViewFileReadType.COMPOSE_RESOURCE_FILES -> fileName
             }
+            onLoadStarted?.invoke()
             element.src = url
 
             if (webViewJsBridge != null) {
@@ -148,6 +153,7 @@ class WasmJsWebView(
 
     override fun reload() {
         try {
+            onLoadStarted?.invoke()
             element.contentWindow?.location?.reload()
         } catch (e: Exception) {
             KLogger.e(
@@ -192,49 +198,7 @@ class WasmJsWebView(
 
         val bridgeScript = createJsBridgeScript(webViewJsBridge.jsBridgeName, true)
         evaluateJavaScript(bridgeScript)
-
-        val messageHandler: (org.w3c.dom.events.Event) -> Unit = { event ->
-            val messageEvent = event as org.w3c.dom.MessageEvent
-            val iframe = element
-
-            if (
-                messageEvent.source == iframe.contentWindow &&
-                messageEvent.data != null
-            ) {
-                try {
-                    val dataString = messageEvent.data.toString()
-
-                    if (dataString.contains(webViewJsBridge.jsBridgeName)) {
-                        val actionPattern = """action[=:][\s]*['"](.*?)['"]""".toRegex()
-                        val paramsPattern = """params[=:][\s]*['"](.*?)['"]""".toRegex()
-                        val callbackPattern = """callbackId[=:][\s]*(\d+)""".toRegex()
-
-                        val action = actionPattern.find(dataString)?.groupValues?.get(1)
-                        val params = paramsPattern.find(dataString)?.groupValues?.get(1) ?: "{}"
-                        val callbackId =
-                            callbackPattern
-                                .find(dataString)
-                                ?.groupValues
-                                ?.get(1)
-                                ?.toIntOrNull()
-                                ?: 0
-
-                        if (action != null) {
-                            val message = JsMessage(
-                                callbackId = callbackId,
-                                methodName = action,
-                                params = params,
-                            )
-                            webViewJsBridge.dispatch(message)
-                        }
-                    }
-                } catch (_: Exception) {
-                }
-            }
-        }
-
-        kotlinx.browser.window.addEventListener("message", messageHandler)
-        webViewJsBridge.webView = this
+        // Message handling is done by the single listener registered in setupJsBridgeForWasm()
     }
 
     override fun initJsBridge(webViewJsBridge: WebViewJsBridge) {

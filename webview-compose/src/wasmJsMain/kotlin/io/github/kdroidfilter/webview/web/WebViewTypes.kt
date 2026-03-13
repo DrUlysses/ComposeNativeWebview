@@ -5,30 +5,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 /**
- * State class for WebView component
- * * Holds the current state of a WebView including URL, content, loading status, etc.
- */
-class WasmJsWebViewState(
-    initialUrl: String = "",
-    initialContent: String = "",
-) {
-    /** Current URL to be loaded */
-    var url: String by mutableStateOf(initialUrl)
-
-    /** HTML content to be displayed */
-    var content: String by mutableStateOf(initialContent)
-
-    /** Last URL that was successfully loaded */
-    var lastLoadedUrl: String? by mutableStateOf(null)
-
-    /** Whether the WebView is currently loading content */
-    var isLoading: Boolean by mutableStateOf(false)
-
-    /** Title of the current page */
-    var pageTitle: String? by mutableStateOf(null)
-}
-
-/**
  * Content types for HTML view
  */
 sealed class HtmlContent {

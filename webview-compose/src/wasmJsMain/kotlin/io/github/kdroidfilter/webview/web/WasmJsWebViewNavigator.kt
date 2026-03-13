@@ -110,6 +110,7 @@ class HtmlViewNavigator(
             canGoBack = element.contentWindow?.history?.length?.let {
                 it > 1
             } ?: false
+            // Browser iframe history API does not expose forward availability
             canGoForward = false
         } catch (e: Exception) {
             KLogger.e(
