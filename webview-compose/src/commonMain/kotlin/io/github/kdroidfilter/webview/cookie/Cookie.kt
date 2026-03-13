@@ -21,18 +21,18 @@ data class Cookie(
         STRICT,
     }
 
-    override fun toString(): String {
-        var cookieValue = "$name=$value"
-
-        if (path != null) cookieValue += "; Path=$path"
-        if (domain != null) cookieValue += "; Domain=$domain"
-        if (expiresDate != null) cookieValue += "; Expires=" + getCookieExpirationDate(expiresDate)
-        if (maxAge != null) cookieValue += "; Max-Age=$maxAge"
-        if (isSecure == true) cookieValue += "; Secure"
-        if (isHttpOnly == true) cookieValue += "; HttpOnly"
-        if (sameSite != null) cookieValue += "; SameSite=$sameSite"
-
-        return "$cookieValue;"
+    // Without buildString is empty in wasmJs
+    override fun toString(): String = buildString {
+        append("$name=$value")
+        if (path != null) append("; Path=$path")
+        // The domain must match the domain of the JavaScript origin. Setting cookies to foreign domains will be silently ignored.
+        if (domain != null) append("; Domain=$domain")
+        if (expiresDate != null) append("; Expires=" + getCookieExpirationDate(expiresDate))
+        if (maxAge != null) append("; Max-Age=$maxAge")
+        if (isSecure == true) append("; Secure")
+        if (isHttpOnly == true) append("; HttpOnly")
+        if (sameSite != null) append("; SameSite=$sameSite")
+        append(';')
     }
 }
 
