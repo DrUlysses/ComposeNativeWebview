@@ -23,6 +23,9 @@ object WasmJsCookieManager : CookieManager {
         cookie: Cookie
     ) {
         // Set the cookie using the document.cookie API
+        KLogger.w(tag = "WasmJsCookieManager") {
+            "removeCookies(url=$url): URL-specific cookie set is not supported in browser context. Cookies for different domain will be ignored."
+        }
         document.cookie = cookie.toString()
     }
 
@@ -32,6 +35,9 @@ object WasmJsCookieManager : CookieManager {
         val cookiesStr = document.cookie
         if (cookiesStr.isEmpty()) {
             return emptyList()
+        }
+        KLogger.w(tag = "WasmJsCookieManager") {
+            "getCookies(url=$url): URL-specific cookies get is not supported in browser context. Returning only cookies for the current domain."
         }
 
         return cookiesStr.split(";").map { cookieStr ->
