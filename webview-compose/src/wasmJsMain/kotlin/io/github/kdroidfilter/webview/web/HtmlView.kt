@@ -181,6 +181,7 @@ fun HtmlView(
             iframe.style.height = "100%"
             iframe.style.overflowX = "auto"
             iframe.style.overflowY = "auto"
+            iframe.style.backgroundColor = "white"
         }
 
         onDispose {
