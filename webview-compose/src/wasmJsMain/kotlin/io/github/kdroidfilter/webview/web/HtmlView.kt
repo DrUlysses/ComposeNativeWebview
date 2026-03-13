@@ -93,6 +93,8 @@ fun HtmlView(
         state.htmlElement = componentInfo.component
         onCreated(componentInfo.component)
 
+        var lastAppliedContent: HtmlContent? = null
+
         componentInfo.updater = Updater(componentInfo.component) { iframe: HTMLIFrameElement ->
             if (!eventsInitialized.value) {
                 eventsInitialized.value = true
@@ -149,24 +151,28 @@ fun HtmlView(
                 }
             }
 
-            when (val content = state.content) {
-                is HtmlContent.Url -> {
-                    iframe.src = content.url
-                    state.loadingState = HtmlLoadingState.Loading
-                }
+            val content = state.content
+            if (content != lastAppliedContent) {
+                lastAppliedContent = content
+                when (content) {
+                    is HtmlContent.Url -> {
+                        iframe.src = content.url
+                        state.loadingState = HtmlLoadingState.Loading
+                    }
 
-                is HtmlContent.Data -> {
-                    iframe.srcdoc = content.data
-                    state.loadingState = HtmlLoadingState.Loading
-                    addContentIdentifierJs(iframe)
-                }
+                    is HtmlContent.Data -> {
+                        iframe.srcdoc = content.data
+                        state.loadingState = HtmlLoadingState.Loading
+                        addContentIdentifierJs(iframe)
+                    }
 
-                is HtmlContent.Post -> {
-                    // POST requests not directly supported in iframe
-                }
+                    is HtmlContent.Post -> {
+                        // POST requests not directly supported in iframe
+                    }
 
-                HtmlContent.NavigatorOnly -> {
-                    // No content update needed
+                    HtmlContent.NavigatorOnly -> {
+                        // No content update needed
+                    }
                 }
             }
 
