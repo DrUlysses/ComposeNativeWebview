@@ -25,6 +25,7 @@ io.github.kdroidfilter.webview.*
 * **Desktop support with native engines**
 * A **Rust + UniFFI (Wry)** backend instead of KCEF / embedded Chromium
 * A **tiny desktop footprint** with system-provided webviews
+* Handling of the **WasmJs** target via **IFrame** usage
 
 ---
 
@@ -32,6 +33,7 @@ io.github.kdroidfilter.webview.*
 
 ✅ **Android**: `android.webkit.WebView`
 ✅ **iOS**: `WKWebView`
+✅ **WasmJs**: `org.w3c.dom.HTMLIFrameElement`
 ✅ **Desktop**: **Wry (Rust)** via **UniFFI**
 
 Desktop engines:
@@ -66,7 +68,7 @@ dependencies {
 }
 ```
 
-Same artifact for **Android, iOS, Desktop**.
+Same artifact for **Android, iOS, Desktop and WasmJs**.
 
 ---
 
@@ -90,6 +92,7 @@ Run the feature showcase first:
 
 * **Desktop**: `./gradlew :demo:run`
 * **Android**: `./gradlew :demo-android:installDebug`
+* **WasmJs**: `./gradlew :demo-wasmJs:wasmJsBrowserDevelopmentRun`
 * **iOS**: open `iosApp/iosApp.xcodeproj` in Xcode and Run
 
 Responsive UI:
@@ -263,14 +266,24 @@ Useful for debugging or platform-specific hooks.
 * `wrywebview/` → Rust core + UniFFI bindings
 * `wrywebview-compose/` → Compose API
 * `demo-shared/` → shared demo UI
-* `demo/`, `demo-android/`, `iosApp/` → platform launchers
+* `demo/`, `demo-android/`, `demo-wasmJs/`, `iosApp/` → platform launchers
 
 ---
 
 ## Limitations ⚠️
 
 * RequestInterceptor does **not** intercept sub-resources
+
+### Desktop
+
 * Desktop UA change recreates the WebView
+
+### WasmJs
+
+* Navigation back and forward is not available in the IFrame.
+* The IFrame will work only if the target website has appropriately configured its CORS.
+* JS can be executed only on the same origin.
+* Cookies can be set only for the parent destination (when the destination of the iframe is the same as the parent destination - cookies can be set. Otherwise, they will be ignored (there is a hack for it, but it is not a clean solution then https://developer.mozilla.org/en-US/docs/Web/API/Document/cookie#security)
 
 ---
 
