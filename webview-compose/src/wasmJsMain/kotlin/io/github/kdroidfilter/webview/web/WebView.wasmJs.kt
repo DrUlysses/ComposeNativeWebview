@@ -3,14 +3,16 @@ package io.github.kdroidfilter.webview.web
 
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import io.github.kdroidfilter.webview.jsbridge.JsMessage
 import io.github.kdroidfilter.webview.jsbridge.WebViewJsBridge
+import io.github.kdroidfilter.webview.jsbridge.parseJsMessage
 import io.github.kdroidfilter.webview.setting.WebSettings
 import io.github.kdroidfilter.webview.util.KLogger
 import kotlinx.browser.document
 import kotlinx.coroutines.launch
 import org.w3c.dom.HTMLIFrameElement
+import org.w3c.dom.MessageEvent
 import org.w3c.dom.Node
+import org.w3c.dom.events.Event
 
 /**
  * Platform-specific parameters for the WebView factory in WebAssembly/JavaScript.
@@ -275,37 +277,18 @@ private fun setupJsBridgeForWasm(
     webViewJsBridge: WebViewJsBridge,
     webViewWrapper: WasmJsWebView
 ): () -> Unit {
-    val messageHandler: (org.w3c.dom.events.Event) -> Unit = { event ->
-        val messageEvent = event as org.w3c.dom.MessageEvent
+    val messageHandler: (Event) -> Unit = { event ->
+        val messageEvent = event as MessageEvent
 
-        if (messageEvent.source == element.contentWindow && messageEvent.data != null) {
+        if (
+            messageEvent.source == element.contentWindow &&
+            messageEvent.data != null
+        ) {
             try {
-                val dataString = messageEvent.data.toString()
-
-                if (dataString.contains(webViewJsBridge.jsBridgeName) && dataString.startsWith("{")) {
-                    val actionPattern = """"action"\s*:\s*"([^"]*)"""".toRegex()
-                    val paramsPattern = """"params"\s*:\s*"((?:[^"\\]|\\.)*)"""".toRegex()
-                    val callbackPattern = """"callbackId"\s*:\s*(\d+)""".toRegex()
-
-                    val actionMatch = actionPattern.find(dataString)
-                    val paramsMatch = paramsPattern.find(dataString)
-                    val callbackMatch = callbackPattern.find(dataString)
-
-                    if (actionMatch != null) {
-                        val action = actionMatch.groupValues[1]
-                        val rawParams = paramsMatch?.groupValues?.get(1) ?: "{}"
-                        val params = rawParams.replace("\\\"", "\"").replace("\\\\", "\\")
-                        val callbackId = callbackMatch?.groupValues?.get(1)?.toIntOrNull() ?: 0
-
-                        val jsMessage = JsMessage(
-                            callbackId = callbackId,
-                            methodName = action,
-                            params = params,
-                        )
-
-                        webViewJsBridge.dispatch(jsMessage)
-                    }
-                }
+                parseJsMessage(
+                    raw = messageEvent.data.toString(),
+                    expectedType = webViewJsBridge.jsBridgeName,
+                )?.let(webViewJsBridge::dispatch)
             } catch (e: Exception) {
                 KLogger.e(
                     t = e,
