@@ -275,25 +275,41 @@ class WryWebViewPanel(
     }
 
     fun getCookiesForUrl(url: String): List<WebViewCookie> {
-        return webviewId?.let {
-            try {
-                NativeBindings.getCookiesForUrl(it, url)
-            } catch (e: Exception) {
-                log("getCookiesForUrl failed: ${e.message}")
-                emptyList()
-            }
-        } ?: emptyList()
+        var result: List<WebViewCookie> = emptyList()
+        val id = webviewId ?: run {
+            log("getCookiesForUrl webviewId is null")
+            return result
+        }
+
+        val action = {
+            result = runCatching { NativeBindings.getCookiesForUrl(id, url) }
+                .onFailure { log("getCookiesForUrl failed: ${it.message}"); it.printStackTrace() }
+                .getOrDefault(emptyList())
+        }
+
+        if (SwingUtilities.isEventDispatchThread()) action() else SwingUtilities.invokeAndWait(
+            action
+        )
+        return result
     }
 
     fun getCookies(): List<WebViewCookie> {
-        return webviewId?.let {
-            try {
-                NativeBindings.getCookies(it)
-            } catch (e: Exception) {
-                log("getCookies failed: ${e.message}")
-                emptyList()
-            }
-        } ?: emptyList()
+        var result: List<WebViewCookie> = emptyList()
+        val id = webviewId ?: run {
+            log("getCookies webviewId is null")
+            return result
+        }
+
+        val action = {
+            result = runCatching { NativeBindings.getCookies(id) }
+                .onFailure { log("getCookies failed: ${it.message}"); it.printStackTrace() }
+                .getOrDefault(emptyList())
+        }
+
+        if (SwingUtilities.isEventDispatchThread()) action() else SwingUtilities.invokeAndWait(
+            action
+        )
+        return result
     }
 
     fun clearCookiesForUrl(url: String) {
@@ -545,7 +561,13 @@ class WryWebViewPanel(
                     if (toSend != lastBounds) {
                         lastBounds = toSend
                         log("setBounds id=$currentId pos=(${toSend.x}, ${toSend.y}) size=${toSend.width}x${toSend.height}")
-                        NativeBindings.setBounds(currentId, toSend.x, toSend.y, toSend.width, toSend.height)
+                        NativeBindings.setBounds(
+                            currentId,
+                            toSend.x,
+                            toSend.y,
+                            toSend.width,
+                            toSend.height
+                        )
                     }
                     if (pendingBounds == null) {
                         stopBoundsTimer()
@@ -736,7 +758,8 @@ class WryWebViewPanel(
         private val IS_MAC = OS_NAME.contains("mac")
         private val IS_WINDOWS = OS_NAME.contains("windows")
         var LOG_ENABLED = run {
-            val raw = System.getProperty("composewebview.wry.log") ?: System.getenv("WRYWEBVIEW_LOG")
+            val raw =
+                System.getProperty("composewebview.wry.log") ?: System.getenv("WRYWEBVIEW_LOG")
             when {
                 raw == null -> false
                 raw == "1" -> true
