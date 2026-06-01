@@ -60,7 +60,6 @@ class WryWebViewPanel(
         // Request focus when clicked to capture keyboard events
         host.addMouseListener(object : MouseAdapter() {
             override fun mousePressed(e: MouseEvent?) {
-                host.requestFocusInWindow()
                 requestWebViewFocus()
             }
         })
@@ -344,7 +343,6 @@ class WryWebViewPanel(
 
     fun requestWebViewFocus() {
         val action = {
-            host.requestFocusInWindow()
             webviewId?.let { NativeBindings.focus(it) }
         }
         if (SwingUtilities.isEventDispatchThread()) {
