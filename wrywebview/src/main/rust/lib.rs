@@ -776,21 +776,11 @@ pub fn drain_ipc_messages(id: u64) -> Result<Vec<String>, WebViewError> {
 
 fn capture_screenshot_inner(id: u64) -> Result<Vec<u8>, WebViewError> {
     wry_log!("[wrywebview] capture_screenshot id={}", id);
-    with_webview(id, |webview| {
-        #[cfg(target_os = "macos")]
-        {
-            webview
-                .screenshot()
-                .map_err(|e| WebViewError::Internal(e.to_string()))
-        }
-        #[cfg(not(target_os = "macos"))]
-        {
-            // For other platforms, wry might not have screenshot() in 0.54
-            // Fallback to JVM paint() in WryWebViewPanel.kt if this returns error
-            Err(WebViewError::Internal(
-                "Native screenshot not implemented for this platform in Rust yet".to_string(),
-            ))
-        }
+    with_webview(id, |_webview| {
+        // Fallback to JVM paint() in WryWebViewPanel.kt if this returns error
+        Err(WebViewError::Internal(
+            "Native screenshot not implemented for this platform in Rust yet".to_string(),
+        ))
     })
 }
 
